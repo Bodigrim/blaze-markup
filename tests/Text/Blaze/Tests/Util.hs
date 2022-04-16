@@ -14,6 +14,7 @@ import Text.Blaze.Internal
 
 import Blaze.ByteString.Builder as B (toLazyByteString)
 import Blaze.ByteString.Builder.Char.Utf8 as B (fromString)
+import Data.Text.Lazy (fromStrict)
 import Data.Text.Lazy.Encoding (encodeUtf8)
 import qualified Data.ByteString.Lazy as LB
 import qualified Text.Blaze.Renderer.String as String (renderMarkup)
@@ -28,7 +29,7 @@ renderUsingString = toLazyByteString . fromString . String.renderMarkup
 -- | Render Markup to an UTF-8 encoded ByteString using the Text renderer
 --
 renderUsingText :: Markup -> LB.ByteString
-renderUsingText = encodeUtf8 . Text.renderMarkup
+renderUsingText = encodeUtf8 . fromStrict . Text.renderMarkup
 
 -- | Render HTML to an UTF-8 encoded ByteString using the Utf8 renderer
 --

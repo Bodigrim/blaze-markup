@@ -91,7 +91,7 @@ import           Data.Text              (Text)
 import qualified Data.Text              as T
 import qualified Data.Text.Encoding     as T
 import qualified Data.Text.Lazy         as LT
-import qualified Data.Text.Lazy.Builder as LTB
+import qualified Data.Text.Builder.Linear as LTB
 import           Data.Typeable          (Typeable)
 import           GHC.Exts               (IsString (..))
 
@@ -369,14 +369,14 @@ preEscapedLazyText = mconcat . map preEscapedText . LT.toChunks
 --
 textBuilder :: LTB.Builder -- ^ Text to insert
             -> Markup      -- ^ Resulting HTML fragment
-textBuilder = lazyText . LTB.toLazyText
+textBuilder b = text (LTB.runBuilder b)
 {-# INLINE textBuilder #-}
 
 -- | A variant of 'preEscapedText' for lazy 'LT.Text'
 --
 preEscapedTextBuilder :: LTB.Builder -- ^ Text to insert
                       -> Markup      -- ^ Resulting HTML fragment
-preEscapedTextBuilder = preEscapedLazyText . LTB.toLazyText
+preEscapedTextBuilder b = preEscapedText (LTB.runBuilder b)
 {-# INLINE preEscapedTextBuilder #-}
 
 content :: ChoiceString -> Markup
@@ -496,14 +496,14 @@ preEscapedLazyTextValue = mconcat . map preEscapedTextValue . LT.toChunks
 --
 textBuilderValue :: LTB.Builder    -- ^ The actual value
                  -> AttributeValue -- ^ Resulting attribute value
-textBuilderValue = lazyTextValue . LTB.toLazyText
+textBuilderValue b = textValue (LTB.runBuilder b)
 {-# INLINE textBuilderValue #-}
 
 -- | A variant of 'preEscapedTextValue' for text 'LTB.Builder'
 --
 preEscapedTextBuilderValue :: LTB.Builder    -- ^ The actual value
                            -> AttributeValue -- ^ Resulting attribute value
-preEscapedTextBuilderValue = preEscapedLazyTextValue . LTB.toLazyText
+preEscapedTextBuilderValue b = preEscapedTextValue (LTB.runBuilder b)
 {-# INLINE preEscapedTextBuilderValue #-}
 
 -- | Create an attribute value from a 'String'.

@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE MagicHash #-}
 -- | A renderer that produces a lazy 'L.Text' value, using the Text Builder.
 --
 module Text.Blaze.Renderer.Text
@@ -23,22 +24,22 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString as S (isInfixOf)
 
 import Text.Blaze.Internal
-import Data.Text.Lazy.Builder (Builder)
-import qualified Data.Text.Lazy.Builder as B
+import Data.Text.Builder.Linear (Builder)
+import qualified Data.Text.Builder.Linear as B
 
 -- | Escape predefined XML entities in a text value
 --
 escapeMarkupEntities :: Text     -- ^ Text to escape
                    -> Builder  -- ^ Resulting text builder
-escapeMarkupEntities = T.foldr escape mempty
+escapeMarkupEntities = T.foldl escape mempty
   where
-    escape :: Char -> Builder -> Builder
-    escape '<'  b = B.fromText "&lt;"   `mappend` b
-    escape '>'  b = B.fromText "&gt;"   `mappend` b
-    escape '&'  b = B.fromText "&amp;"  `mappend` b
-    escape '"'  b = B.fromText "&quot;" `mappend` b
-    escape '\'' b = B.fromText "&#39;"  `mappend` b
-    escape x    b = B.singleton x       `mappend` b
+    escape :: Builder -> Char -> Builder
+    escape b '<'  = b <> B.fromAddr "&lt;"#
+    escape b '>'  = b <> B.fromAddr "&gt;"#
+    escape b '&'  = b <> B.fromAddr "&amp;"#
+    escape b '"'  = b <> B.fromAddr "&quot;"#
+    escape b '\'' = b <> B.fromAddr "&#39;"#
+    escape b x    = b <> B.fromChar x
 
 -- | Render a 'ChoiceString'. TODO: Optimization possibility, apply static
 -- argument transformation.
@@ -61,7 +62,7 @@ fromChoiceString d (External x) = case x of
     ByteString s -> if "</" `S.isInfixOf` s then mempty else B.fromText (d s)
     s            -> fromChoiceString d s
 fromChoiceString d (AppendChoiceString x y) =
-    fromChoiceString d x `mappend` fromChoiceString d y
+    fromChoiceString d x <> fromChoiceString d y
 fromChoiceString _ EmptyChoiceString = mempty
 {-# INLINE fromChoiceString #-}
 
@@ -86,46 +87,46 @@ renderMarkupBuilderWith d = go mempty
     go :: Builder -> MarkupM b -> Builder
     go attrs (Parent _ open close content) =
         B.fromText (getText open)
-            `mappend` attrs
-            `mappend` B.singleton '>'
-            `mappend` go mempty content
-            `mappend` B.fromText (getText close)
+            <> attrs
+            <> B.fromChar '>'
+            <> go mempty content
+            <> B.fromText (getText close)
     go attrs (CustomParent tag content) =
-        B.singleton '<'
-            `mappend` fromChoiceString d tag
-            `mappend` attrs
-            `mappend` B.singleton '>'
-            `mappend` go mempty content
-            `mappend` B.fromText "</"
-            `mappend` fromChoiceString d tag
-            `mappend` B.singleton '>'
+        B.fromChar '<'
+            <> fromChoiceString d tag
+            <> attrs
+            <> B.fromChar '>'
+            <> go mempty content
+            <> B.fromAddr "</"#
+            <> fromChoiceString d tag
+            <> B.fromChar '>'
     go attrs (Leaf _ begin end _) =
         B.fromText (getText begin)
-            `mappend` attrs
-            `mappend` B.fromText (getText end)
+            <> attrs
+            <> B.fromText (getText end)
     go attrs (CustomLeaf tag close _) =
-        B.singleton '<'
-            `mappend` fromChoiceString d tag
-            `mappend` attrs
-            `mappend` (if close then B.fromText " />" else B.singleton '>')
+        B.fromChar '<'
+            <> fromChoiceString d tag
+            <> attrs
+            <> (if close then B.fromAddr " />"# else B.fromChar '>')
     go attrs (AddAttribute _ key value h) =
         go (B.fromText (getText key)
-            `mappend` fromChoiceString d value
-            `mappend` B.singleton '"'
-            `mappend` attrs) h
+            <> fromChoiceString d value
+            <> B.fromChar '"'
+            <> attrs) h
     go attrs (AddCustomAttribute key value h) =
-        go (B.singleton ' '
-            `mappend` fromChoiceString d key
-            `mappend` B.fromText "=\""
-            `mappend` fromChoiceString d value
-            `mappend` B.singleton '"'
-            `mappend` attrs) h
+        go (B.fromChar ' '
+            <> fromChoiceString d key
+            <> B.fromAddr "=\""#
+            <> fromChoiceString d value
+            <> B.fromChar '"'
+            <> attrs) h
     go _ (Content content _) = fromChoiceString d content
     go _ (Comment comment _) =
-        B.fromText "<!-- "
-            `mappend` fromChoiceString d comment
-            `mappend` " -->"
-    go attrs (Append h1 h2) = go attrs h1 `mappend` go attrs h2
+        B.fromAddr "<!-- "#
+            <> fromChoiceString d comment
+            <> B.fromAddr " -->"#
+    go attrs (Append h1 h2) = go attrs h1 <> go attrs h2
     go _ (Empty _) = mempty
     {-# NOINLINE go #-}
 {-# INLINE renderMarkupBuilderWith #-}
@@ -142,11 +143,11 @@ renderHtmlBuilderWith = renderMarkupBuilderWith
 -- input markup, this function will consider them as UTF-8 encoded values and
 -- decode them that way.
 --
-renderMarkup :: Markup -> L.Text
+renderMarkup :: Markup -> T.Text
 renderMarkup = renderMarkupWith decodeUtf8
 {-# INLINE renderMarkup #-}
 
-renderHtml :: Markup -> L.Text
+renderHtml :: Markup -> T.Text
 renderHtml = renderMarkup
 {-# INLINE renderHtml #-}
 {-# DEPRECATED renderHtml
@@ -158,12 +159,12 @@ renderHtml = renderMarkup
 --
 renderMarkupWith :: (ByteString -> Text)  -- ^ Decoder for ByteString's.
                  -> Markup                -- ^ Markup to render
-                 -> L.Text                -- Resulting lazy text
-renderMarkupWith d = B.toLazyText . renderMarkupBuilderWith d
+                 -> T.Text                -- Resulting lazy text
+renderMarkupWith d m = B.runBuilder (renderMarkupBuilderWith d m)
 
 renderHtmlWith :: (ByteString -> Text)  -- ^ Decoder for ByteString's.
                -> Markup                -- ^ Markup to render
-               -> L.Text                -- ^ Resulting lazy text
+               -> T.Text                -- ^ Resulting lazy text
 renderHtmlWith = renderMarkupWith
 {-# DEPRECATED renderHtmlWith
     "Use renderHtmlWith from Text.Blaze.Html.Renderer.Text instead" #-}

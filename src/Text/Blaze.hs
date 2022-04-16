@@ -100,7 +100,7 @@ import           Data.List.NonEmpty     (NonEmpty (..))
 
 import           Data.Text              (Text)
 import qualified Data.Text.Lazy         as LT
-import qualified Data.Text.Lazy.Builder as LTB
+import qualified Data.Text.Builder.Linear as LTB
 
 import           Text.Blaze.Internal
 

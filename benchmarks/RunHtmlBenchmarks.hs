@@ -20,4 +20,4 @@ main :: IO ()
 main = defaultMain $ map benchHtml benchmarks
   where
     benchHtml (HtmlBenchmark name f x _) =
-      bench name $ nf (LT.length . Text.renderMarkup . f) x
+      bench name $ nf (T.length . Text.renderMarkup . f) x
