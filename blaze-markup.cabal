@@ -89,3 +89,19 @@ Test-suite blaze-markup-tests
 Source-repository head
   Type:     git
   Location: http://github.com/jaspervdj/blaze-markup
+
+benchmark blaze-markup-bench
+  type: exitcode-stdio-1.0
+  main-is: RunHtmlBenchmarks.hs
+  other-modules:
+    BenchmarkUtils
+    HtmlBenchmarks
+  hs-source-dirs: benchmarks
+  ghc-options: -rtsopts
+  build-depends:
+    base,
+    blaze-markup,
+    bytestring, 
+    text,
+    tasty-bench >= 0.3
+  default-language: Haskell2010
