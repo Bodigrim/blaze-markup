@@ -19,8 +19,5 @@ import HtmlBenchmarks (HtmlBenchmark (..), benchmarks)
 main :: IO ()
 main = defaultMain $ map benchHtml benchmarks
   where
-    benchHtml (HtmlBenchmark name f x _) = bgroup name $
-        [ bench "Utf8"   $ nf (LB.length .  Utf8.renderMarkup . f) x
-        , bench "String" $ nf (String.renderMarkup . f) x
-        , bench "Text"   $ nf (LT.length . Text.renderMarkup . f) x
-        ]
+    benchHtml (HtmlBenchmark name f x _) =
+      bench name $ nf (LT.length . Text.renderMarkup . f) x
